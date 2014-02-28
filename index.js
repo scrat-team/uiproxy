@@ -5,32 +5,41 @@
  /*jshint loopfunc: true */
 'use strict';
 
-var _ = require('lang'),
+var type = require('type'),
+    each = require('each'),
+    extend = require('extend'),
     TAP = 'tap',
     isMobile = navigator.userAgent.match(/(android|ipad;|ipod;|iphone;|iphone os|windows phone)/i);
 
 function isString(obj) {
-    return _.type(obj) === 'string';
+    return type(obj) === 'string';
 }
 
 function isObject(obj) {
-    return _.type(obj) === 'object';
+    return type(obj) === 'object';
 }
 
 function isArray(obj) {
-    return _.type(obj) === 'array';
+    return type(obj) === 'array';
 }
 
 function isFunction(obj) {
-    return _.type(obj) === 'function';
+    return type(obj) === 'function';
 }
 
 function isDef(obj) {
-    return _.type(obj) !== 'undefined';
+    return type(obj) !== 'undefined';
 }
 
 function isUndef(obj) {
-    return _.type(obj) === 'undefined';
+    return type(obj) === 'undefined';
+}
+
+function bind(func, context) {
+    var args = slice.call(arguments, 2);
+    return function () {
+        return func.apply(context, args.concat(slice.call(arguments)));
+    };
 }
 
 function Map() {
@@ -72,7 +81,7 @@ Map.prototype = {
     },
     each: function(fn, context) {
         if (fn) {
-            _.each(this.map, function(value, key) {
+            each(this.map, function(value, key) {
                 fn.call(this, value, key);
             }, context || this);
         }
@@ -214,7 +223,7 @@ UIProxy.prototype.$ = function (selector) {
  * 初始化
  */
 UIProxy.prototype.init = function(options) {
-    this.defaults = _.extend({}, defaults, options);
+    this.defaults = extend({}, defaults, options);
     this.reset();
 };
 
@@ -228,7 +237,7 @@ UIProxy.prototype.reset = function (resetDefaults) {
         }, this);
     }
     if (resetDefaults === true) {
-        this.defaults = _.extend({}, this.originDefaults);
+        this.defaults = extend({}, this.originDefaults);
     }
     this.proxyMap = new Map();
     this.eventMap = new Map();
@@ -240,7 +249,7 @@ UIProxy.prototype.reset = function (resetDefaults) {
  */
 UIProxy.prototype.config = function (key, value) {
     if (isObject(key)) {
-        _.each(key, function(v, k) {
+        each(key, function(v, k) {
             this.defaults[k] = v;
         }, this);
     } else if (isDef(value)) {
@@ -284,7 +293,7 @@ UIProxy.prototype.parseItem = function (item) {
  */
 UIProxy.prototype.on = function (selectors, proxy, item, options) {
     if (isObject(selectors)) {
-        _.each(selectors, function(item, selector) {
+        each(selectors, function(item, selector) {
             this.on(selector, proxy, item, options);
         }, this);
     } else if (isString(selectors)) {
@@ -318,7 +327,7 @@ UIProxy.prototype.on = function (selectors, proxy, item, options) {
  */
 UIProxy.prototype.off = function (selectors, proxy, item) {
     if (isObject(selectors)) {
-        _.each(selectors, function(item, selector) {
+        each(selectors, function(item, selector) {
             this.off(selector, proxy, item);
         }, this);
     } else if (isString(selectors)) {
@@ -359,7 +368,7 @@ UIProxy.prototype.addEvent = function (proxy) {
     options.startFn = bind(this.onTouchStart());
     options.moveFn = bind(this.onTouchMove());
     options.endFn = bind(this.onTouchEnd());
-    _.each(els, function(el) {
+    each(els, function(el) {
         if (el && el.addEventListener) {
             if (isMobile) {
                 el.addEventListener('touchstart', options.startFn);
@@ -391,7 +400,7 @@ UIProxy.prototype.removeEvent = function (proxy) {
     }
 
     var els = this.$(proxy);
-    _.each(els, function(el) {
+    each(els, function(el) {
         if (el && el.removeEventListener) {
             el.removeEventListener('touchstart', options.startFn);
             el.removeEventListener('touchmove', options.moveFn);
@@ -434,7 +443,7 @@ UIProxy.prototype.updateEvent = function (proxy) {
 UIProxy.prototype.eachSelector = function (selectors, iterator) {
     var items, type, selector;
     selectors = selectors.split(',');
-    _.each(selectors, function(item) {
+    each(selectors, function(item) {
         items = item.split(' ');
         if (items.length > 0 && this.types.indexOf(items[0]) > -1) {
             type = items.shift();
@@ -453,7 +462,7 @@ UIProxy.prototype.splitSelector = function (selectors) {
     var that = this, a, s;
     if (isArray(selectors)) {
         a = [];
-        _.each(selectors, function(selector) {
+        each(selectors, function(selector) {
             s = that.splitSelector(selector);
             a.push(s);
         });
@@ -507,7 +516,7 @@ UIProxy.prototype.isSelectorMatch = function (el, selector) {
         if (matches[1] === '.') {
             className = el.className;
             if (className) {
-                _.each(className.split(' '), function(c) {
+                each(className.split(' '), function(c) {
                     if (c === matches[2]) {
                         isMatch = true;
                     }
@@ -552,12 +561,12 @@ UIProxy.prototype.walk = function (type, proxy, target, fn) {
         selectors = [];
 
     // 将 'div .a .b.c' 分解为 ['div', '.a', '.b.c']
-    _.each(origins, function(selector) {
+    each(origins, function(selector) {
         selectors.push(selector.split(' '));
     });
 
     while (el) {
-        _.each(selectors, function(selectorArray, index) {
+        each(selectors, function(selectorArray, index) {
             var length = selectorArray.length;
             if (length > 0) {
                 var selector = selectorArray[length - 1];
@@ -583,7 +592,7 @@ UIProxy.prototype.walk = function (type, proxy, target, fn) {
     }
 
     var items;
-    _.each(orders, function(index) {
+    each(orders, function(index) {
         var selector;
         if (selectors[index].length === 0) {
             selector = origins[index];
@@ -628,9 +637,9 @@ UIProxy.prototype.bindEvent = function (type, selector, proxy, item, options) {
     // 解析 item
     if (item) {
         item = this.parseItem(item);
-        _.extend(item.options, this.defaults);
+        extend(item.options, this.defaults);
         if (isObject(options)) {
-            _.extend(item.options, options);
+            extend(item.options, options);
         }
     }
     var typeMap, selectorMap, content,
@@ -678,7 +687,7 @@ UIProxy.prototype.bindEvent = function (type, selector, proxy, item, options) {
                 }
 
                 var newContent = [];
-                _.each(content, function(c) {
+                each(content, function(c) {
                     if (c.fn !== item.fn) {
                         newContent.push(c);
                     }
@@ -854,9 +863,9 @@ UIProxy.prototype.resetGesture = function (options, more) {
     options.isDefaultPrevented = false;
     options.isImmediatePropagationStopped = false;
     options.isPropagationStopped = false;
-    options.preventDefault = _.bind(this.preventDefault(), options);
-    options.stopPropagation = _.bind(this.stopPropagation(), options);
-    options.stopImmediatePropagation = _.bind(this.stopImmediatePropagation(), options);
+    options.preventDefault = bind(this.preventDefault(), options);
+    options.stopPropagation = bind(this.stopPropagation(), options);
+    options.stopImmediatePropagation = bind(this.stopImmediatePropagation(), options);
     options.last = options.start || [];
     options.start = more.start || [];
     options.startTime = more.startTime || new Date();
@@ -873,14 +882,14 @@ UIProxy.prototype.merge = function(options, more) {
     if (!more) {
         more = {};
     }
-    return _.extend(options, more);
+    return extend(options, more);
 };
 
 /**
  * 克隆
  */
 UIProxy.prototype.clone = function(origin) {
-    return _.extend(true, {}, origin);
+    return extend(true, {}, origin);
 };
 
 /**
